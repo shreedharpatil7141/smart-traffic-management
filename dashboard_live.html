@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Traffic Control Centre</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#04091a;--bg2:rgba(8,18,40,0.9);--card:rgba(10,22,50,0.85);
+  --border:rgba(80,140,255,0.12);--accent:#00d4ff;
+  --green:#00ff88;--orange:#ff8c00;--red:#ff2244;--amber:#ffd700;
+  --text:#c8d8ff;--dim:rgba(200,216,255,0.45);--mono:'Share Tech Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse 80% 50% at 20% -10%,rgba(0,100,255,0.08),transparent),
+  radial-gradient(ellipse 60% 40% at 80% 110%,rgba(0,200,120,0.06),transparent);pointer-events:none;z-index:0}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 28px;background:rgba(4,9,26,0.95);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border)}
+.nav-left{display:flex;align-items:center;gap:14px}
+.nav-icon{font-size:2rem}
+.nav-title{font-size:1.25rem;font-weight:700;letter-spacing:.5px;color:#fff}
+.nav-sub{font-size:.75rem;color:var(--dim);margin-top:2px}
+.nav-right{display:flex;align-items:center;gap:18px}
+.live-badge{display:flex;align-items:center;gap:7px;padding:6px 14px;border-radius:20px;
+  font-size:.8rem;font-weight:600;letter-spacing:1px;border:1px solid;transition:all .3s}
+.live-on{background:rgba(0,255,136,.1);border-color:var(--green);color:var(--green)}
+.live-off{background:rgba(255,34,68,.1);border-color:var(--red);color:var(--red)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.live-on .live-dot{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.clock{font-family:var(--mono);font-size:1.05rem;color:var(--accent);letter-spacing:2px}
+
+/* MAIN */
+main{max-width:1600px;margin:0 auto;padding:20px 24px;position:relative;z-index:1}
+
+/* SUMMARY ROW */
+.summary-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:18px 20px;text-align:center;backdrop-filter:blur(12px);transition:border-color .3s}
+.scard:hover{border-color:rgba(80,140,255,.3)}
+.sval{font-size:2rem;font-weight:700;font-family:var(--mono);color:#fff;line-height:1}
+.slabel{font-size:.72rem;color:var(--dim);margin-top:6px;text-transform:uppercase;letter-spacing:1px}
+
+/* SECTION */
+section{margin-bottom:28px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;
+  padding-bottom:10px;border-bottom:1px solid var(--border)}
+.sec-head h2{font-size:1.05rem;font-weight:600;color:#fff}
+.sec-tag{font-size:.7rem;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);
+  color:var(--accent);padding:3px 10px;border-radius:10px;letter-spacing:.5px}
+.junc-meta{display:flex;gap:20px;font-size:.8rem;color:var(--dim)}
+.junc-meta strong{color:#fff}
+
+/* CROWD GRID */
+.crowd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.ccard{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  overflow:hidden;backdrop-filter:blur(12px);transition:border-color .3s}
+.ccard:hover{border-color:rgba(80,140,255,.3)}
+.ccard-title{padding:14px 16px 10px;font-weight:700;font-size:1rem;color:#fff;
+  display:flex;align-items:center;gap:8px}
+.ccard-frame{width:100%;height:170px;object-fit:cover;background:#0a0a1a;display:block}
+.ccard-frame-ph{width:100%;height:170px;background:#080f20;display:flex;align-items:center;
+  justify-content:center;color:var(--dim);font-size:.8rem}
+.ccard-body{padding:14px 16px}
+.cmetrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.cmet{background:rgba(255,255,255,.03);border-radius:10px;padding:10px 12px}
+.cmet-val{font-size:1.6rem;font-weight:700;font-family:var(--mono);color:#fff;line-height:1}
+.cmet-lbl{font-size:.68rem;color:var(--dim);margin-top:3px;text-transform:uppercase;letter-spacing:.8px}
+.badges{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.badge{padding:3px 10px;border-radius:8px;font-size:.72rem;font-weight:600;letter-spacing:.5px}
+.d-low{background:rgba(0,255,136,.12);color:var(--green)}
+.d-medium{background:rgba(255,215,0,.12);color:var(--amber)}
+.d-high{background:rgba(255,34,68,.12);color:var(--red)}
+.r-safe{background:rgba(0,255,136,.12);color:var(--green)}
+.r-warning{background:rgba(255,215,0,.12);color:var(--amber)}
+.r-high{background:rgba(255,140,0,.12);color:var(--orange)}
+.r-critical{background:rgba(255,34,68,.15);color:var(--red);animation:flashbadge 1s ease-in-out infinite alternate}
+@keyframes flashbadge{from{background:rgba(255,34,68,.15)}to{background:rgba(255,34,68,.3)}}
+.g-open{background:rgba(0,255,136,.12);color:var(--green)}
+.g-slow{background:rgba(255,215,0,.12);color:var(--amber)}
+.g-hold{background:rgba(255,140,0,.12);color:var(--orange)}
+.g-close{background:rgba(255,34,68,.12);color:var(--red)}
+.risk-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.risk-bar-wrap{flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.risk-bar-fill{height:100%;border-radius:4px;width:0%;transition:width .5s ease;
+  background:linear-gradient(90deg,var(--green),var(--amber),var(--orange),var(--red))}
+.risk-score-lbl{font-family:var(--mono);font-size:.8rem;color:var(--dim);min-width:32px;text-align:right}
+
+/* TRAFFIC LIGHT */
+.signal-row{display:flex;align-items:center;gap:12px}
+.tl{display:flex;flex-direction:column;align-items:center;
+  background:#070d1e;border:1px solid rgba(255,255,255,.08);border-radius:12px;
+  padding:10px 7px;gap:7px}
+.tl-l{width:26px;height:26px;border-radius:50%;transition:all .3s}
+.tl-r{background:#2d0008}
+.tl-a{background:#1a1000}
+.tl-g{background:#001a0a}
+.tl-r.on{background:var(--red);box-shadow:0 0 16px var(--red),0 0 32px rgba(255,34,68,.4)}
+.tl-a.on{background:var(--amber);box-shadow:0 0 16px var(--amber),0 0 32px rgba(255,215,0,.4)}
+.tl-g.on{background:var(--green);box-shadow:0 0 16px var(--green),0 0 32px rgba(0,255,136,.4)}
+.sig-info{flex:1}
+.sig-state{font-size:1.1rem;font-weight:700}
+.sig-state.green{color:var(--green)}
+.sig-state.red{color:var(--red)}
+.sig-time{font-family:var(--mono);font-size:.78rem;color:var(--dim);margin-top:3px}
+.sig-reason{font-size:.72rem;color:var(--dim);margin-top:2px}
+
+/* LANE GRID */
+.lane-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.lane-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:18px;text-align:center;transition:all .3s;backdrop-filter:blur(12px)}
+.lane-card.active{border-color:var(--green);background:rgba(0,255,136,.06);
+  box-shadow:0 0 24px rgba(0,255,136,.15)}
+.lane-name{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;
+  color:var(--dim);margin-bottom:10px}
+.lane-count{font-size:2.8rem;font-weight:700;font-family:var(--mono);color:#fff;line-height:1}
+.lane-label{font-size:.68rem;color:var(--dim);margin-top:4px}
+.lane-sig{margin-top:12px;font-size:.8rem;font-weight:600}
+.lane-sig.green{color:var(--green)}
+.lane-sig.red{color:#e03};
+.lane-q{font-size:.7rem;color:var(--dim);margin-top:3px}
+
+/* ALERTS */
+.alerts-list{display:flex;flex-direction:column;gap:10px}
+.alert-item{display:flex;align-items:flex-start;gap:12px;padding:14px 18px;
+  background:rgba(255,34,68,.07);border:1px solid rgba(255,34,68,.2);
+  border-radius:12px;font-size:.85rem}
+.alert-icon{font-size:1.3rem;flex-shrink:0}
+.alert-msg{font-weight:500;color:var(--text)}
+.alert-meta{font-size:.72rem;color:var(--dim);margin-top:3px}
+.no-alert{text-align:center;padding:20px;color:var(--dim);font-size:.85rem;
+  background:rgba(0,255,136,.03);border:1px solid rgba(0,255,136,.1);border-radius:12px}
+
+/* FOOTER */
+footer{background:rgba(4,9,26,.9);border-top:1px solid var(--border);
+  padding:12px 28px;display:flex;gap:24px;font-size:.75rem;color:var(--dim);
+  position:relative;z-index:1}
+footer span strong{color:var(--text)}
+
+/* UTIL */
+.green-t{color:var(--green)}.red-t{color:var(--red)}.amber-t{color:var(--amber)}.orange-t{color:var(--orange)}
+.mono{font-family:var(--mono)}
+
+/* RESPONSIVE */
+@media(max-width:1100px){.crowd-grid{grid-template-columns:1fr 1fr}.lane-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.crowd-grid{grid-template-columns:1fr}.summary-row{grid-template-columns:1fr 1fr}.lane-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <span class="nav-icon">🚦</span>
+    <div>
+      <div class="nav-title">Smart Traffic Control Centre</div>
+      <div class="nav-sub">Real-time Crowd &amp; Junction Management — AI Powered</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="live-badge live-off" id="liveBadge">
+      <span class="live-dot"></span>
+      <span id="liveText">CONNECTING</span>
+    </div>
+    <div class="clock" id="clock">00:00:00</div>
+  </div>
+</nav>
+
+<main>
+
+<!-- SUMMARY ROW -->
+<div class="summary-row">
+  <div class="scard"><div class="sval" id="s-people">--</div><div class="slabel">👥 Total People</div></div>
+  <div class="scard"><div class="sval" id="s-vehicles">--</div><div class="slabel">🚗 Total Vehicles</div></div>
+  <div class="scard"><div class="sval" id="s-risk">--</div><div class="slabel">⚠️ Highest Risk</div></div>
+  <div class="scard"><div class="sval" id="s-alerts">0</div><div class="slabel">🚨 Active Alerts</div></div>
+  <div class="scard"><div class="sval mono" id="s-time" style="font-size:1.1rem">--:--:--</div><div class="slabel">🕐 Last Update</div></div>
+</div>
+
+<!-- CROWD MONITORING -->
+<section>
+  <div class="sec-head">
+    <h2>🏛️ Crowd Monitoring — Live YOLO Detection</h2>
+    <span class="sec-tag">YOLOv8 · GPU FP16 · Real-time</span>
+  </div>
+  <div class="crowd-grid" id="crowdGrid">
+    <!-- Injected by JS -->
+  </div>
+</section>
+
+<!-- JUNCTION -->
+<section>
+  <div class="sec-head">
+    <h2>🚦 Junction-1 Adaptive Signal Control</h2>
+    <div class="junc-meta">
+      <span>Active Way: <strong id="j-active">--</strong></span>
+      <span>Green Time: <strong id="j-timer" class="green-t">--s</strong></span>
+      <span>Total Vehicles: <strong id="j-total">--</strong></span>
+      <span>Cycle: <strong id="j-cycle">--s</strong></span>
+    </div>
+  </div>
+  <div class="lane-grid" id="laneGrid">
+    <!-- Injected by JS -->
+  </div>
+</section>
+
+<!-- ALERTS -->
+<section>
+  <div class="sec-head">
+    <h2>⚠️ Active Alerts &amp; Diversions</h2>
+  </div>
+  <div class="alerts-list" id="alertsList">
+    <div class="no-alert">✅ No active alerts — all areas within safe parameters</div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>Engine: <strong id="f-engine" class="green-t">CONNECTING</strong></span>
+  <span>Source: <strong id="f-source">--</strong></span>
+  <span>State Age: <strong id="f-age">--</strong></span>
+  <span>Polls: <strong id="f-polls" class="green-t">0</strong></span>
+  <span>Dashboard: Smart Traffic Control Centre v2.0</span>
+</footer>
+
+<script>
+let pollCount = 0;
+const PLACES = ['Temple','Market','Ground'];
+const PLACE_ICONS = {Temple:'🕌', Market:'🏪', Ground:'🏟️'};
+const WAYS = ['way-a','way-b','way-c','way-d'];
+const RISK_ORDER = ['SAFE','WARNING','HIGH','CRITICAL'];
+const RISK_CLASS = {SAFE:'r-safe',WARNING:'r-warning',HIGH:'r-high',CRITICAL:'r-critical'};
+const RISK_COL = {SAFE:'green-t',WARNING:'amber-t',HIGH:'orange-t',CRITICAL:'red-t'};
+const DENSITY_CLASS = {LOW:'d-low',MEDIUM:'d-medium',HIGH:'d-high'};
+const GATE_CLASS = {OPEN:'g-open',SLOW:'g-slow',HOLD:'g-hold',CLOSE:'g-close'};
+
+// ── Build crowd cards once ──────────────────────────────────────
+function buildCrowdCards() {
+  const grid = document.getElementById('crowdGrid');
+  grid.innerHTML = PLACES.map(p => {
+    const id = p.toLowerCase();
+    return `
+    <div class="ccard" id="card-${id}">
+      <div class="ccard-title">${PLACE_ICONS[p]} ${p}</div>
+      <img class="ccard-frame" id="frame-crowd_${id}" src="/api/frame/crowd_${id}?t=0"
+           onerror="this.style.display='none';document.getElementById('ph-${id}').style.display='flex'"
+           alt="${p} YOLO feed">
+      <div class="ccard-frame-ph" id="ph-${id}" style="display:none">⏳ Waiting for YOLO frame…</div>
+      <div class="ccard-body">
+        <div class="cmetrics">
+          <div class="cmet"><div class="cmet-val" id="${id}-people">0</div><div class="cmet-lbl">👥 People</div></div>
+          <div class="cmet"><div class="cmet-val" id="${id}-veh">0</div><div class="cmet-lbl">🚗 Vehicles</div></div>
+        </div>
+        <div class="badges">
+          <span class="badge d-low" id="${id}-density">LOW</span>
+          <span class="badge r-safe" id="${id}-risk">SAFE</span>
+          <span class="badge g-open" id="${id}-gate">OPEN</span>
+          <span class="badge d-low" id="${id}-flow" style="background:rgba(0,212,255,.1);color:var(--accent)">STABLE</span>
+        </div>
+        <div class="risk-row">
+          <span style="font-size:.7rem;color:var(--dim);min-width:60px">Risk Score</span>
+          <div class="risk-bar-wrap"><div class="risk-bar-fill" id="${id}-rbar" style="width:0%"></div></div>
+          <span class="risk-score-lbl" id="${id}-rscore">0</span>
+        </div>
+        <div class="signal-row">
+          <div class="tl">
+            <div class="tl-l tl-r on" id="${id}-tl-r"></div>
+            <div class="tl-l tl-a" id="${id}-tl-a"></div>
+            <div class="tl-l tl-g" id="${id}-tl-g"></div>
+          </div>
+          <div class="sig-info">
+            <div class="sig-state red" id="${id}-sigstate">RED</div>
+            <div class="sig-time" id="${id}-sigtime">Green: 0s</div>
+            <div class="sig-reason" id="${id}-sigreason">Initialising…</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Build lane cards once ───────────────────────────────────────
+function buildLaneCards() {
+  const grid = document.getElementById('laneGrid');
+  grid.innerHTML = WAYS.map(w => {
+    const safe = w.replace('-','');
+    return `
+    <div class="lane-card" id="lane-${safe}">
+      <div class="lane-name">${w.replace('way-','Way ').toUpperCase()}</div>
+      <img style="width:100%;height:100px;object-fit:cover;border-radius:8px;background:#070d1e;margin-bottom:10px"
+           id="frame-frame_j1_${w}" src="/api/frame/frame_j1_${w}?t=0" alt="Lane ${w}">
+      <div class="lane-count" id="lane-${safe}-count">0</div>
+      <div class="lane-label">vehicles</div>
+      <div class="lane-sig red" id="lane-${safe}-sig">🔴 RED</div>
+      <div class="lane-q" id="lane-${safe}-q">Queue: 0m</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Number animation ────────────────────────────────────────────
+function animNum(el, val, dur=300) {
+  if (!el) return;
+  const end = parseInt(val) || 0;
+  el.textContent = end;  // always write, no skip
+}
+
+// ── Update crowd card ───────────────────────────────────────────
+function updateCrowd(place, d) {
+  const id = place.toLowerCase();
+  const g = (s) => document.getElementById(`${id}-${s}`);
+  if (!d) return;
+  animNum(g('people'), d.people||0);
+  animNum(g('veh'), d.vehicles||0);
+  const den = (d.density||'LOW').toUpperCase();
+  const risk = (d.risk||'SAFE').toUpperCase();
+  const gate = (d.gate_status||'OPEN').toUpperCase();
+  const flow = (d.flow||'STABLE');
+  const sig = (d.signal_state||'GREEN').toUpperCase();
+  const score = d.risk_score||0;
+  if(g('density')){ g('density').textContent=den; g('density').className='badge '+(DENSITY_CLASS[den]||'d-low'); }
+  if(g('risk')){ g('risk').textContent=risk; g('risk').className='badge '+(RISK_CLASS[risk]||'r-safe'); }
+  if(g('gate')){ g('gate').textContent=gate; g('gate').className='badge '+(GATE_CLASS[gate]||'g-open'); }
+  if(g('flow')){ g('flow').textContent=flow; }
+  if(g('rbar')){ g('rbar').style.width=score+'%'; }
+  if(g('rscore')){ g('rscore').textContent=score; }
+  // Traffic light
+  if(g('tl-r')){ g('tl-r').className='tl-l tl-r'+(sig==='RED'?' on':''); }
+  if(g('tl-g')){ g('tl-g').className='tl-l tl-g'+(sig==='GREEN'?' on':''); }
+  if(g('sigstate')){ g('sigstate').textContent=sig; g('sigstate').className='sig-state '+(sig==='GREEN'?'green':'red'); }
+  if(g('sigtime')){ g('sigtime').textContent=sig==='GREEN'?`Green: ${d.green_time||0}s`:'Restricted'; }
+  if(g('sigreason')){ g('sigreason').textContent=d.signal_reason||''; }
+}
+
+// ── Update junction ─────────────────────────────────────────────
+function updateJunction(jd) {
+  if (!jd) return;
+  const active = jd.active_way||'way-a';
+  const lanes = jd.lanes||{};
+  const pedPhase = jd.pedestrian_phase_active||false;
+  document.getElementById('j-active').textContent = pedPhase ? '🚶 PEDESTRIAN' : active.toUpperCase();
+  document.getElementById('j-timer').textContent = `${jd.green_remaining_sec||0}s`;
+  animNum(document.getElementById('j-total'), jd.vehicles||0);
+  document.getElementById('j-cycle').textContent = `${Math.round(jd.cycle_time_sec||60)}s`;
+  WAYS.forEach(w => {
+    const safe = w.replace('-','');
+    const isActive = (!pedPhase) && w===active;
+    const card = document.getElementById(`lane-${safe}`);
+    if (card){ card.className='lane-card'+(isActive?' active':''); }
+    animNum(document.getElementById(`lane-${safe}-count`), lanes[w]||0);
+    const sig = document.getElementById(`lane-${safe}-sig`);
+    if (sig){ sig.textContent=isActive?'🟢 GREEN':'🔴 RED'; sig.className='lane-sig '+(isActive?'green':'red'); }
+    const q = document.getElementById(`lane-${safe}-q`);
+    const qm = ((lanes[w]||0)*6);
+    if (q){ q.textContent=`Queue: ${qm}m${qm>50?' ⚠':''}` }
+  });
+}
+
+// ── Update alerts ───────────────────────────────────────────────
+function updateAlerts(diversions, state) {
+  const list = document.getElementById('alertsList');
+  const items = [];
+  (diversions||[]).forEach(d=>{
+    items.push(`<div class="alert-item"><span class="alert-icon">🚨</span>
+      <div><div class="alert-msg">${d.message||''}</div>
+      <div class="alert-meta">Place: ${d.place||''} · Signal: ${d.signal||''}</div></div></div>`);
+  });
+  PLACES.forEach(p=>{
+    const d = (state||{})[p]||{};
+    if (d.risk==='CRITICAL'){
+      items.push(`<div class="alert-item"><span class="alert-icon">⚠️</span>
+        <div><div class="alert-msg">${p}: STAMPEDE RISK DETECTED — Risk Score ${d.risk_score||0}/100</div>
+        <div class="alert-meta">People: ${d.people||0} · Density: ${d.density||'-'} · Gate: ${d.gate_status||'-'}</div></div></div>`);
+    }
+    if (d.surge_detected){
+      items.push(`<div class="alert-item" style="border-color:rgba(255,140,0,.3);background:rgba(255,140,0,.05)">
+        <span class="alert-icon">📈</span>
+        <div><div class="alert-msg">${p}: Crowd surge detected — ETA to critical: ${d.eta_to_critical_sec?Math.round(d.eta_to_critical_sec)+'s':'N/A'}</div>
+        <div class="alert-meta">Surge rate: ${d.surge_rate?d.surge_rate.toFixed(2):'-'} ppl/frame</div></div></div>`);
+    }
+  });
+  list.innerHTML = items.length
+    ? items.join('')
+    : '<div class="no-alert">✅ No active alerts — all areas within safe parameters</div>';
+  animNum(document.getElementById('s-alerts'), items.length);
+}
+
+// ── Refresh frames ──────────────────────────────────────────────
+function refreshFrames() {
+  const t = Date.now();
+  ['crowd_temple','crowd_market','crowd_ground',
+   'frame_j1_way-a','frame_j1_way-b','frame_j1_way-c','frame_j1_way-d'].forEach(prefix=>{
+    const el = document.getElementById('frame-'+prefix);
+    if (el) { el.src=`/api/frame/${prefix}?t=${t}`; el.style.display='block'; }
+    // hide placeholder if frame loaded
+    const ph = document.getElementById('ph-'+prefix.replace('crowd_',''));
+    if (ph && el && el.complete && el.naturalHeight>0) ph.style.display='none';
+  });
+}
+
+// ── Main update ─────────────────────────────────────────────────
+async function update() {
+  try {
+    const resp = await fetch('/api/state?t=' + Date.now());
+    if (!resp.ok) throw new Error('not ok');
+    const state = await resp.json();
+    pollCount++;
+    document.getElementById('f-polls').textContent = pollCount;
+    const city = state.City||{};
+    const signals = city.signals||{};
+    const divs = city.diversions||[];
+    const epoch = parseFloat(city.last_update_epoch||0);
+    const age = Date.now()/1000 - epoch;
+    const live = age < 12 && epoch > 0;
+    // Live badge
+    const badge = document.getElementById('liveBadge');
+    badge.className='live-badge '+(live?'live-on':'live-off');
+    document.getElementById('liveText').textContent = live?'LIVE':'OFFLINE';
+    // Summary
+    let tp=0,tv=0,hr='SAFE';
+    PLACES.forEach(p=>{ const d=state[p]||{}; tp+=(d.people||0); tv+=(d.vehicles||0);
+      if(RISK_ORDER.indexOf(d.risk||'SAFE')>RISK_ORDER.indexOf(hr)) hr=d.risk; });
+    animNum(document.getElementById('s-people'),tp);
+    animNum(document.getElementById('s-vehicles'),tv);
+    const rEl = document.getElementById('s-risk');
+    rEl.textContent=hr; rEl.className='sval '+(RISK_COL[hr]||'green-t');
+    document.getElementById('s-time').textContent = city.last_update_ts||'--';
+    // Footer
+    const ageStr = epoch > 0 ? `${age.toFixed(1)}s ago` : 'no data';
+    document.getElementById('f-engine').textContent=live?'RUNNING':'STOPPED';
+    document.getElementById('f-engine').className=live?'green-t':'red-t';
+    document.getElementById('f-source').textContent='state_live.json';
+    document.getElementById('f-age').textContent=ageStr;
+    const lc = document.getElementById('f-polls');
+    if (lc) lc.textContent = `API poll: ${pollCount} | Engine loop: ${city.loop_count||0}`;
+    // Crowd cards
+    PLACES.forEach(p=>updateCrowd(p,state[p]||{}));
+    // Junction-1
+    updateJunction(signals['Junction-1']||{});
+    // Alerts
+    updateAlerts(divs,state);
+    // Frames
+    refreshFrames();
+  } catch(e) {
+    document.getElementById('liveBadge').className='live-badge live-off';
+    document.getElementById('liveText').textContent='OFFLINE';
+    document.getElementById('f-engine').textContent='STOPPED';
+    document.getElementById('f-engine').className='red-t';
+    console.error('update error:', e);
+  }
+}
+
+// ── Clock ───────────────────────────────────────────────────────
+function tick(){
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// ── Init ────────────────────────────────────────────────────────
+buildCrowdCards();
+buildLaneCards();
+tick();
+setInterval(tick,1000);
+update();
+setInterval(update,2000);
+</script>
+</body>
+</html>

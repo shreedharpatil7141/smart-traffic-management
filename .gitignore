@@ -2,3 +2,12 @@ venv/
 __pycache__/ 
 *.pyc 
 yolov8n.pt 
+data/
+*.tmp
+__pycache__/
+*.pyc
+venv/
+fix_main.py
+frame*.jpg
+state.json
+
